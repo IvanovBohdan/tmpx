@@ -1,5 +1,5 @@
 module.exports = {
-	port : process.env.EMAIL_PORT || 25,
+	port : process.env.SMTP_PORT || 25,
 	expressPort: process.env.PORT || 5000,
 	host : process.env.HOST || "0.0.0.0",
 	telegramBotToken : '5207295773:AAGhku402XgEPS1fs1rk0SzXOANCnnmNIts',
