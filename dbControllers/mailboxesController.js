@@ -4,7 +4,7 @@ const config = require('../config.js')
 class Mailboxes{
 
   static getNewAddress(count){
-    const prefix = Mailboxes.getPassword(2).toLowerCase() + Math.floor(Math.random()*10).toString(26)
+    const prefix = Mailboxes.getPassword(2).toLowerCase()
     const body = count.toString(26)
 
     return prefix+body
@@ -22,7 +22,7 @@ class Mailboxes{
 
   static async addMailbox(user=null){
     const res = await db.query('select id from mailboxes order by id desc limit 1')
-    const count = parseInt(res.rows[0].id) + 1
+    const count = parseInt(res.rows[0]?.id) + 1 || 1
     const newAddres = Mailboxes.getNewAddress(count)
     const expires = new Date()
     expires.setHours(expires.getHours() + 1)

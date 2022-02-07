@@ -1,11 +1,6 @@
 const Pool = require('pg').Pool
+const config = require('./config.js')
 
-const pool = new Pool({
-	user: 'postgres',
-	password: '12345',
-	host: 'localhost',
-	port: 5432,
-	database: 'node_mail'
-})
+const pool = new Pool(config.db)
 
 module.exports = pool
