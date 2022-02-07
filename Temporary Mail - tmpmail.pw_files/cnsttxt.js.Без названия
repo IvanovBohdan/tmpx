@@ -1,0 +1,48 @@
+var _____WB$wombat$assign$function_____ = function(name) {return (self._wb_wombat && self._wb_wombat.local_init && self._wb_wombat.local_init(name)) || self[name]; };
+if (!self.__WB_pmw) { self.__WB_pmw = function(obj) { this.__WB_source = obj; return this; } }
+{
+  let window = _____WB$wombat$assign$function_____("window");
+  let self = _____WB$wombat$assign$function_____("self");
+  let document = _____WB$wombat$assign$function_____("document");
+  let location = _____WB$wombat$assign$function_____("location");
+  let top = _____WB$wombat$assign$function_____("top");
+  let parent = _____WB$wombat$assign$function_____("parent");
+  let frames = _____WB$wombat$assign$function_____("frames");
+  let opener = _____WB$wombat$assign$function_____("opener");
+
+var cnstTxt = {
+	from: {en: "From:", ru: "От:"},
+	subj: {en: "Subject:", ru: "Тема:"},
+	copied: {en: "Copied", ru: "Скопировано"},
+	justnow: {en: "Just now", ru: "Только что"},
+	secondsago: {en: "seconds ago", ru: "секунд назад"},
+	minutesago: {en: "minutes ago", ru: "минут назад"},
+	unknwner: {en: "Unknown error #1", ru: "Неизвестная ошибка #1"},
+	added: {en: "Added", ru: "Добавлено"},
+	savepass: {en: "Remember", ru: "Запомнить"},
+	reset: {en: "Reset", ru: "Сброс"}
+};
+
+}
+/*
+     FILE ARCHIVED ON 03:44:39 Oct 07, 2021 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 02:46:24 Jan 31, 2022.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  captures_list: 135.678
+  exclusion.robots: 0.146
+  exclusion.robots.policy: 0.14
+  cdx.remote: 0.046
+  esindex: 0.004
+  LoadShardBlock: 108.446 (3)
+  PetaboxLoader3.datanode: 83.217 (5)
+  CDXLines.iter: 16.045 (3)
+  PetaboxLoader3.resolve: 80.634 (2)
+  load_resource: 86.502
+  loaddict: 6.466
+*/

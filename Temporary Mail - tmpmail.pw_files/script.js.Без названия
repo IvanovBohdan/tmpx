@@ -1,0 +1,598 @@
+var _____WB$wombat$assign$function_____ = function(name) {return (self._wb_wombat && self._wb_wombat.local_init && self._wb_wombat.local_init(name)) || self[name]; };
+if (!self.__WB_pmw) { self.__WB_pmw = function(obj) { this.__WB_source = obj; return this; } }
+{
+  let window = _____WB$wombat$assign$function_____("window");
+  let self = _____WB$wombat$assign$function_____("self");
+  let document = _____WB$wombat$assign$function_____("document");
+  let location = _____WB$wombat$assign$function_____("location");
+  let top = _____WB$wombat$assign$function_____("top");
+  let parent = _____WB$wombat$assign$function_____("parent");
+  let frames = _____WB$wombat$assign$function_____("frames");
+  let opener = _____WB$wombat$assign$function_____("opener");
+
+HTMLElement.prototype.click = function() {
+   var evt = this.ownerDocument.createEvent('MouseEvents');
+   evt.initMouseEvent('click', true, true, this.ownerDocument.defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+   this.dispatchEvent(evt);
+}
+
+//setCookie(name, value, {expires: 3600});
+function setCookie(name, value, options) {  // {expires: 3600}  - на час
+    options = options || {};
+    if (options.path === undefined) options.path = "/";
+
+    var expires = options.expires;
+
+    if (typeof expires == "number" && expires) {
+        var d = new Date();
+        d.setTime(d.getTime() + expires * 1000);
+        expires = options.expires = d;
+    }
+    if (expires && expires.toUTCString) {
+        options.expires = expires.toUTCString();
+    }
+
+    value = encodeURIComponent(value);
+
+    var updatedCookie = name + "=" + value;
+
+    for (var propName in options) {
+        updatedCookie += "; " + propName;
+        var propValue = options[propName];
+        if (propValue !== true) {
+            updatedCookie += "=" + propValue;
+        }
+    }
+
+    document.cookie = updatedCookie;
+}
+
+function getCookie(name) {
+    var matches = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
+var email_value_cur_state = 0;
+var email_value_state = 0;
+
+var html_timer_1 = "10:00";
+var html_timer_2 = "00:30";
+
+var popup_cnt = document.querySelector(".popup_container");
+var popup_content = popup_cnt.querySelector("p");
+
+var output = document.querySelector(".yourmailbox .output");
+var output_value = output.querySelector(".value");
+var output_btn = output.querySelector(".fontello");
+
+var btn_newemail = document.querySelector(".btn.newemail");
+var btn_more10 = document.querySelector(".btn.more10");
+var btn_more60 = document.querySelector(".btn.more60");
+
+var inbox = [
+	{
+		text: popup_content.innerHTML,
+		time: new Date().getTime()
+	}
+];
+
+var session = {};
+var c_email = getCookie("email");
+var c_pass = getCookie("pass");
+var c_t = getCookie("t");
+var c_time = getCookie("time");
+
+var myemaildomain = getCookie("domain");
+if (myemaildomain !== undefined) {
+	window.emaildomain = 0;//parseInt(myemaildomain);
+}
+
+var neednewemail = true;
+
+if (c_email && c_pass && c_t && c_time) {
+	session.email = c_email;
+	session.pass = c_pass;
+	session.t = parseInt(c_t);
+	session.time = parseInt(c_time);
+	session.lastrefresh = 0;
+	session.got = 0;
+	output_value.innerHTML = c_email;
+	neednewemail = false;
+}
+
+function showPopup(content) {
+	if (content) popup_content.innerHTML = content;
+	popup_cnt.classList.add("shown");
+}
+
+function hidePopup() {
+	popup_cnt.classList.remove("shown");
+}
+
+var alert_cnt = document.querySelector(".alert_container");
+var alert_c = alert_cnt.querySelector(".alert");
+function showAlert(text, error) {
+	alert_c.innerHTML = text;
+	if (error) alert_c.classList.add("error");
+	else alert_c.classList.remove("error");
+	alert_cnt.classList.add("shown");
+}
+alert_cnt.onclick = function(){
+	alert_cnt.classList.remove("shown");
+}
+
+popup_cnt.querySelector(".fontello").onclick = hidePopup;
+
+function convertNewLinesToBr(str) {
+	return str.replace(/(?:\r\n|\r|\n)/g, '<br>');
+}
+
+function setMailItemsOnClick() {
+	var items = document.querySelectorAll(".mail-item");
+	for (var i = 0; i < items.length; i++) {
+		items[i].onclick = function(e){
+			var mail_id = parseInt(this.getAttribute("data-id"));
+			if (inbox[mail_id].url) {
+				var tmpa = document.createElement("a");
+				tmpa.setAttribute("target", "_blank");
+				tmpa.setAttribute("href", inbox[mail_id].url);
+				tmpa.click();
+			} else {
+				var from = cnstTxt["from"][lang] + " " + this.querySelector(".from").innerHTML + "<br>";
+				var subj = cnstTxt["subj"][lang] + " " + this.querySelector(".subject").innerHTML + "<br><br>";
+				showPopup(from + subj + convertNewLinesToBr(inbox[mail_id].text));
+			}
+		}
+	}
+}
+
+setMailItemsOnClick();
+
+var refresh_busy = false;
+var refresh_btn = document.querySelector(".inbox .status .fontello");
+refresh_btn.onclick = function(){
+	if (!refresh_busy && session.t && (new Date().getTime()) - session.t > 900) {
+		refresh_busy = true;
+		this.classList.add("rotated");
+
+		session.lastrefresh = new Date().getTime();
+
+		sendAjaxRequest({
+			email: session.email,
+			pass: session.pass,
+			act: "get"
+		}, function(json){
+			if (json) {
+				if (json.error) showAlert(json.error, true);
+				else if (json.mails) {
+					var i;
+					for (i = session.got; i < json.mails.length; i++) {
+						appendMail(json.mails[i].id, json.mails[i].from, json.mails[i].subj, json.mails[i].text);
+					}
+					session.got = i;
+					setMailItemsOnClick();
+					document.querySelector(".inbox .status span b").innerHTML = inbox.length;
+				}
+			} else {
+				showAlert(cnstTxt["unknwner"][lang] + "1", true);
+			}
+		});
+
+		setTimeout(function(){
+			refresh_btn.classList.remove("rotated");
+			refresh_busy = false;
+		}, 10000);
+	}
+}
+
+function selectText(container) {
+    if (document.selection) { // IE
+        var range = document.body.createTextRange();
+        range.moveToElementText(container);
+        range.select();
+    } else if (window.getSelection) {
+        var range = document.createRange();
+        range.selectNode(container);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+    }
+}
+
+output.onclick = function(e){
+	selectText(output_value);
+}
+
+output_btn.onclick = function(e){
+	selectText(output_value);
+	document.execCommand('copy');
+	showAlert(cnstTxt["copied"][lang]);
+	setTimeout(function(){alert_c.click();}, 1500);
+	e.stopPropagation();
+}
+
+/*
+<div class="mail-item" data-id="0">
+	<div class="from">hello@tmpmail.pw</div>
+	<div class="subject"><?=$cnstTxt["hellosubj"][$lang]?></div>
+	<div class="when"><?=$cnstTxt["justnow"][$lang]?></div>
+</div>
+*/
+
+function escapeHtml(text) {
+  var map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+var letters_list = document.querySelector(".letters");
+
+function appendMail(letter_id, from, subj, text) {
+	var id = inbox.length;
+
+	var ishtml = false;
+	if (subj.length >= 10 && subj.substr(0, 10) == "<!@HTML@!>") {
+		ishtml = true;
+		subj = subj.substr(10);
+	}
+
+	if (ishtml) {
+		inbox[id] = {
+			url: "https://web.archive.org/web/20211007034428/https://tmpmail.pw/show.php?letter=" + letter_id + "&upass=" + session.pass,
+			time: new Date().getTime()
+		}
+	} else {
+		inbox[id] = {
+			text: escapeHtml(text),
+			time: new Date().getTime()
+		}
+	}
+
+	var item = document.createElement("div");
+	item.setAttribute("class", "mail-item real-mail");
+	item.setAttribute("data-id", id);
+
+	var html = '';
+	html += '<div class="from">'+escapeHtml(from)+'</div>';
+	html += '<div class="subject">'+escapeHtml(subj)+'</div>';
+	html += '<div class="when">'+cnstTxt["justnow"][lang]+'</div>';
+
+	item.innerHTML = html;
+
+	letters_list.insertBefore(item, letters_list.firstChild);
+}
+
+function sendAjaxRequest(parameters, onloadfunction) {
+    var fd = new FormData();
+    for (key in parameters) {
+        fd.append(key, parameters[key]);
+    }
+    fd.append("emaildomain", window.emaildomain || 0);
+    var xhr = new XMLHttpRequest();
+	xhr.open('POST', 'ajax.php', true);
+	xhr.onload = function(e){
+	    var answ = xhr.responseText;
+        //console.log("answer: "+answ);
+	    var json = false;
+	    try {
+	    	json = JSON.parse(answ);
+	    } catch(e) {}
+	    onloadfunction(json);
+	}
+	xhr.send(fd);
+}
+
+function getNewEmail(){
+	btn_newemail.classList.add("inactive");
+	var oldmails = document.querySelectorAll(".mail-item.real-mail");
+	for (var i = 0; i < oldmails.length; i++) {
+		oldmails[i].remove();
+	}
+	inbox = [inbox[0]];
+	document.querySelector(".inbox .status span b").innerHTML = inbox.length;
+	setTimeout(function(){
+		btn_newemail.classList.remove("inactive");
+	}, 1000 * 30);
+	sendAjaxRequest({
+		lang: lang,
+		act: "new"
+	}, function(json){
+		if (!json) showAlert(cnstTxt["unknwner"][lang], true);
+		else {
+			if (json.error) showAlert(json.error, true);
+			else if (json.email && json.pass) {
+				output_value.innerHTML = session.email = json.email;
+				email_value_state = 1;
+				session.pass = json.pass;
+				session.got = 0;
+				session.lastrefresh = new Date().getTime();
+				session.t = new Date().getTime();
+				session.time = 10 * 60 * 1000;
+
+				setCookie("email", session.email, {expires: 3600 * 24 * 365});
+				setCookie("pass", session.pass, {expires: 3600 * 24 * 365});
+				setCookie("t", session.t, {expires: 3600 * 24 * 365});
+				setCookie("time", session.time, {expires: 3600 * 24 * 365});
+			}
+		}
+	});
+	refresh_btn.classList.remove("rotated");
+}
+
+if (neednewemail) {
+	getNewEmail();
+} else {
+	updateEmailStatus();
+}
+
+btn_newemail.onclick = getNewEmail;
+
+function updateEmailStatus(){
+	sendAjaxRequest({
+		lang: lang,
+		act: "howmanyleft",
+		email: session.email,
+		pass: session.pass
+	}, function(json){
+		if (json) {
+			//if (json.error) showAlert(json.error, true);
+			//else 
+			if (json.left !== undefined) {
+				
+				session.t = new Date().getTime() - 1000;
+				session.time = parseInt(json.left) * 1000 + 1000;
+			}
+		} /*else {
+			showAlert(cnstTxt["unknwner"][lang] + "14", true);
+		}*/
+	});
+}
+
+function getMoreMinutes(minutes) {
+	sendAjaxRequest({
+		lang: lang,
+		act: "more"+minutes,
+		email: session.email,
+		pass: session.pass
+	}, function(json){
+		if (json) {
+			if (json.error) showAlert(json.error, true);
+			else if (json.ok) {
+				updateEmailStatus();
+				showAlert(cnstTxt["added"][lang]);
+				setTimeout(function(){alert_cnt.classList.remove("shown");},1500);
+			}
+		} else {
+			showAlert(cnstTxt["unknwner"][lang] + "12", true);
+		}
+	});
+}
+
+btn_more10.onclick = function(){
+	getMoreMinutes(10);
+}
+
+btn_more60.onclick = function(){
+	getMoreMinutes(60);
+}
+
+var requestAnimFrame = (function(){
+    return  window.requestAnimationFrame       || 
+        window.webkitRequestAnimationFrame || 
+        window.mozRequestAnimationFrame    || 
+        window.oRequestAnimationFrame      || 
+        window.msRequestAnimationFrame     || 
+        function(callback, element){
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
+
+var left2refresh = document.querySelector(".inbox .status .left");
+var left2expire = document.querySelector(".yourmailbox .label b");
+
+var lastbtnclasst = 0;
+var oldbtn_more_active = true;
+
+function animate(){
+	var t = new Date().getTime();
+
+	var btn_more_active = true;
+
+	if (session.t && t - session.t > 900) {
+
+		var fromcreation = t - session.t;
+		var lefttoexpire = session.time - fromcreation;
+
+		if (lefttoexpire > 0) {
+
+			email_value_state = 1;
+			var leftsec = Math.round(lefttoexpire / 1000);
+
+			if (leftsec >= 10 * 60) {
+				btn_more_active = false;
+			}
+
+			var onlysec = leftsec % 60;
+			var mins = (leftsec - onlysec) / 60;
+
+			onlysec += "";
+			mins += "";
+
+			if (onlysec.length == 1) onlysec = "0" + onlysec;
+			if (mins.length == 1) mins = "0" + mins;
+
+			var for_html_timer_1 = mins + ":" + onlysec;
+			if (for_html_timer_1 != html_timer_1) {
+				html_timer_1 = for_html_timer_1;
+				left2expire.innerHTML = html_timer_1;
+			}
+
+
+			var fromrefresh = t - session.lastrefresh;
+			var lefttorefresh = 30 * 1000 - fromrefresh;
+
+			if (lefttorefresh > 0) {
+				leftsec = ""+Math.round(lefttorefresh / 1000);
+				if (leftsec.length == 1) leftsec = "0" + leftsec;
+
+				var for_html_timer_2 = "00:" + leftsec;
+				if (for_html_timer_2 != html_timer_2) {
+					html_timer_2 = for_html_timer_2;
+					left2refresh.innerHTML = html_timer_2;
+				}
+			} else {
+				refresh_btn.onclick();
+			}
+		} else {
+			var for_html_timer_1 = "00:00";
+			var for_html_timer_2 = "00:00";
+
+			if (for_html_timer_1 != html_timer_1) {
+				html_timer_1 = for_html_timer_1;
+				left2expire.innerHTML = html_timer_1;
+			}
+			if (for_html_timer_2 != html_timer_2) {
+				html_timer_2 = for_html_timer_2;
+				left2refresh.innerHTML = html_timer_2;
+			}
+
+			email_value_state = 0;
+			btn_more_active = false;
+		}
+	} else {
+		var for_html_timer_2 = "00:00";
+		if (for_html_timer_2 != html_timer_2) {
+			html_timer_2 = for_html_timer_2;
+			left2refresh.innerHTML = html_timer_2;
+		}
+	}
+
+	if (oldbtn_more_active != btn_more_active) {  // t - lastbtnclasst > 100
+		//lastbtnclasst = t;
+		if (btn_more_active) {
+			btn_more10.classList.remove("inactive");
+			btn_more60.classList.remove("inactive");
+		} else {
+			btn_more10.classList.add("inactive");
+			btn_more60.classList.add("inactive");
+		}
+
+		oldbtn_more_active = btn_more_active;
+	}
+
+	if (email_value_state != email_value_cur_state) {
+		if (email_value_state) output_value.classList.remove("old");
+		else output_value.classList.add("old");
+		email_value_cur_state = email_value_state;
+	}
+
+	requestAnimFrame(animate);
+}
+
+animate();
+
+
+let feedback = document.querySelector(".feedback");
+let feedback_btn = document.querySelector(".feedback_btn");
+let send_feedback = feedback.querySelector(".btn.send");
+let close_feedback = feedback.querySelector(".fontello");
+
+let f_inp_name = feedback.querySelector("input[name=name]");
+let f_inp_mail = feedback.querySelector("input[name=contact]");
+let f_text = feedback.querySelector("textarea");
+
+feedback_btn.onclick = function(){
+	feedback.classList.add("shown");
+}
+
+close_feedback.onclick = function(){
+	feedback.classList.remove("shown");
+}
+
+send_feedback.onclick = function(){
+	let v1 = f_inp_name.value;
+	let v2 = f_inp_mail.value;
+	let v3 = f_text.value;
+	let capthca = feedback.querySelector(".g-recaptcha textarea[name=g-recaptcha-response]").value;
+
+	if (!v3 || !capthca) {
+		alert("Error!");
+		return;
+	} else {
+		let fd = new FormData();
+		fd.append('name', v1);
+		fd.append('contact', v2);
+		fd.append('text', v3);
+		fd.append('capthca', capthca);
+
+		var xhr = new XMLHttpRequest();
+		xhr.open('POST', 'feedback.php', true);
+		xhr.send(fd);
+
+		if (grecaptcha && grecaptcha.reset) grecaptcha.reset();
+		f_text.value = "";
+		close_feedback.onclick();
+	}
+}
+
+let ratebtns = document.querySelectorAll(".btn.rate");
+for (let i = 0; i < ratebtns.length; i++) {
+	ratebtns[i].onclick = function(){
+		let wh = Math.round((parseInt(window.innerHeight) - 290)/2);
+		let ww = Math.round((parseInt(window.innerWidth) - 290)/2);
+		let params = 'scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,width=280,height=280,left='+ww+',top='+wh;
+		window.open('/rate/?lang='+lang+'&r='+(i+1), 'rate', params);
+	}
+}
+
+let btnsettings = document.querySelector(".btn.settings");
+/*btnsettings.onclick = function(){
+	let popup_html = '<div class="btn domain" data-domain="0">@notua.com</div>';
+	popup_html += '<div class="btn domain" data-domain="1">@yasellerbot.xyz</div>';
+	showPopup(popup_html);
+
+	let dbtns = document.querySelectorAll(".btn.domain");
+	let myemaildomain = window.emaildomain || 0;
+	for (let i = 0; i < dbtns.length; i++) {
+		dbtns[i].onclick = function(){
+			let di = parseInt(this.dataset.domain);
+			window.emaildomain = di;
+			setCookie("domain", di, {expires: 3600 * 24 * 365});
+			hidePopup();
+		}
+		if (myemaildomain != i) {
+			dbtns[i].style.opacity = 0.65;
+		}
+	}
+}*/
+
+}
+/*
+     FILE ARCHIVED ON 03:44:28 Oct 07, 2021 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 02:46:34 Jan 31, 2022.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  captures_list: 560.163
+  exclusion.robots: 0.203
+  exclusion.robots.policy: 0.195
+  RedisCDXSource: 1.048
+  esindex: 0.009
+  LoadShardBlock: 537.768 (3)
+  PetaboxLoader3.datanode: 389.165 (8)
+  PetaboxLoader3.resolve: 189.299 (3)
+  CDXLines.iter: 14.857 (2)
+  load_resource: 48.389
+  loaddict: 24.411
+*/
