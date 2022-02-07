@@ -85,5 +85,5 @@ server.listen(PORT, HOST, () => {
     console.log(`Server is working on host: ${HOST}, port ${PORT}...`);
 })
 
-app.listen(5000)
+app.listen(config.expressPort)
 
